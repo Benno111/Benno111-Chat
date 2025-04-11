@@ -84,6 +84,22 @@
       await signOut(auth);
     });
 
+    function embedMediaLinks(text) {
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      return text.replace(urlRegex, url => {
+        if (url.match(/\.(jpeg|jpg|gif|png)$/)) {
+          return `<img src="${url}" style="max-width:100%; max-height:200px;">`;
+        } else if (url.includes("youtube.com") || url.includes("youtu.be")) {
+          const videoId = url.includes("youtu.be")
+            ? url.split("/").pop()
+            : new URL(url).searchParams.get("v");
+          return `<iframe width="300" height="200" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+        } else {
+          return `<a href="${url}" target="_blank">${url}</a>`;
+        }
+      });
+    }
+
     onAuthStateChanged(auth, (user) => {
       const firstLoginKey = 'firstLoginDone';
       const isFirstLogin = !localStorage.getItem(firstLoginKey);
@@ -115,7 +131,7 @@
       snapshot.forEach(doc => {
         const data = doc.data();
         const msgEl = document.createElement("div");
-        msgEl.textContent = `${data.username}: ${data.text}`;
+        msgEl.innerHTML = `<strong>${data.username}:</strong> ` + embedMediaLinks(data.text);
         messagesDiv.appendChild(msgEl);
       });
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -183,6 +199,32 @@
     .form-buttons {
       display: flex;
       gap: 10px;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+        max-width: 100%;
+      }
+      #messages {
+        height: 250px;
+        font-size: 14px;
+      }
+      #inputContainer {
+        flex-direction: column;
+        gap: 5px;
+      }
+      input, button {
+        width: 100%;
+        font-size: 16px;
+      }
+      button {
+        padding: 10px;
+      }
+      h1 {
+        font-size: 1.5em;
+        text-align: center;
+      }
     }
   </style>
 </head>
