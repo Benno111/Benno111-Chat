@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Benno111 Chat</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      onSnapshot,
+      query,
+      orderBy,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+
+    const firebaseConfig = {
+  apiKey: "AIzaSyDrizdZiiCBjdr3SRvVXfg0rQNHqMkIyXc",
+  authDomain: "benno111chat.firebaseapp.com",
+  projectId: "benno111chat",
+  storageBucket: "benno111chat.firebasestorage.app",
+  messagingSenderId: "1074654415299",
+  appId: "1:1074654415299:web:9862174377eabc53bd9576"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const messagesDiv = document.getElementById("messages");
+    const input = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const loginBtn = document.getElementById("loginBtn");
+    const registerBtn = document.getElementById("registerBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userInfo = document.getElementById("userInfo");
+    const errorDiv = document.getElementById("error");
+    const chatContainer = document.getElementById("chatContainer");
+
+    let currentUser = null;
+
+    async function login(email, password) {
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        errorDiv.textContent = "";
+      } catch (error) {
+        errorDiv.textContent = error.message;
+      }
+    }
+
+    async function register(email, password) {
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        errorDiv.textContent = "";
+      } catch (error) {
+        errorDiv.textContent = error.message;
+      }
+    }
+
+    loginBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      login(email, password);
+    });
+
+    registerBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      register(email, password);
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      const firstLoginKey = 'firstLoginDone';
+      const isFirstLogin = !localStorage.getItem(firstLoginKey);
+      currentUser = user;
+      if (user) {
+        userInfo.textContent = `Logged in as ${user.email}`;
+        document.getElementById("loginForm").style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        input.disabled = false;
+        sendBtn.disabled = false;
+        chatContainer.style.display = "block";
+        if (isFirstLogin) {
+          localStorage.setItem(firstLoginKey, 'true');
+          location.reload();
+        }
+      } else {
+        userInfo.textContent = "Not logged in";
+        document.getElementById("loginForm").style.display = "block";
+        logoutBtn.style.display = "none";
+        input.disabled = true;
+        sendBtn.disabled = true;
+        chatContainer.style.display = "none";
+      }
+    });
+
+    const q = query(collection(db, "messages"), orderBy("timestamp"));
+    onSnapshot(q, (snapshot) => {
+      messagesDiv.innerHTML = "";
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const msgEl = document.createElement("div");
+        msgEl.textContent = `${data.username}: ${data.text}`;
+        messagesDiv.appendChild(msgEl);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+
+    sendBtn.addEventListener("click", async () => {
+      const text = input.value.trim();
+      if (!text || !currentUser) return;
+      try {
+        await addDoc(collection(db, "messages"), {
+          text,
+          timestamp: serverTimestamp(),
+          username: currentUser.email
+        });
+        input.value = "";
+      } catch (error) {
+        console.error("Error sending message:", error);
+      }
+    });
+  </script>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+    #messages {
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 400px;
+      overflow-y: scroll;
+      margin-bottom: 10px;
+      background-color: #f5f5f5;
+    }
+    #inputContainer {
+      display: flex;
+      gap: 10px;
+    }
+    input {
+      flex: 1;
+      padding: 8px;
+    }
+    button {
+      padding: 8px 16px;
+    }
+    #authControls {
+      margin-bottom: 10px;
+    }
+    #userInfo {
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    #error {
+      color: red;
+      font-size: 0.9em;
+      margin-bottom: 10px;
+    }
+    .form-buttons {
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Benno111 Chat</h1>
+  <div id="authControls">
+    <div id="userInfo">Not logged in</div>
+    <form id="loginForm">
+      <input type="email" id="email" placeholder="Email" required>
+      <input type="password" id="password" placeholder="Password" required>
+      <div class="form-buttons">
+        <button id="loginBtn">Login</button>
+        <button id="registerBtn">Register</button>
+      </div>
+    </form>
+    <div id="error"></div>
+    <button id="logoutBtn" style="display: none;">Logout</button>
+  </div>
+  <div id="chatContainer">
+    <div id="messages"></div>
+    <div id="inputContainer">
+      <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+      <button id="sendBtn" disabled>Send</button>
+    </div>
+  </div>
+</body>
+</html>
