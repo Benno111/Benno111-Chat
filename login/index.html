@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login</title>
+</head>
+<body>
+  <h1>Login Page</h1>
+
+  <form id="loginForm">
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username" required /><br/>
+
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required /><br/>
+
+    <button type="submit">Login</button>
+  </form>
+
+<script>
+  function compressAndStore(username, password) {
+    const data = `${username}:${password}`;
+
+    // Encode as UTF-16 and compress with Base64
+    const utf16Bytes = Array.from(data).map(char => char.charCodeAt(0));
+    const binaryString = utf16Bytes.map(code => String.fromCharCode(code)).join('');
+    const base64Encoded = btoa(binaryString);
+
+    // Store in cookie
+    document.cookie = `token=${base64Encoded}; path=/; max-age=3600`;
+  }
+
+  function decompressToken() {
+    const match = document.cookie.match(/(^| )token=([^;]+)/);
+    if (!match) return null;
+
+    const base64Encoded = match[2];
+    const binaryString = atob(base64Encoded);
+    const utf16Chars = Array.from(binaryString).map(char => String.fromCharCode(char.charCodeAt(0)));
+    return utf16Chars.join('');
+  }
+
+  document.getElementById("loginForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+
+    compressAndStore(username, password);
+
+    // Redirect to your app page
+    window.location.href = "https://benno111.github.io/Benno111-Chat/app/";
+  });
+</script>
+</body>
+</html>
+
