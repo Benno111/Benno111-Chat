@@ -2,33 +2,561 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Homepage</title>
+  <title>Discord Clone Lite</title>
+  <style>
+    body, html {
+      margin: 0; padding: 0; height: 100vh; font-family: Arial, sans-serif;
+      display: flex; flex-direction: column; background: #36393f; color: white;
+    }
+
+    /* Loading Screen */
+    #loadingScreen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #202225;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      flex-direction: column;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+    }
+    #loadingScreen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loader img {
+      width: 100px;
+      margin-bottom: 20px;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.7; }
+    }
+
+    /* Main app layout */
+    #login {
+      padding: 20px;
+    }
+
+    #chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    #topBar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: #2f3136;
+      flex-shrink: 0;
+      font-weight: bold;
+    }
+
+    #mainArea {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #servers {
+      width: 80px; /* Increased width */
+      background: #202225;
+      color: white;
+      overflow-y: auto;
+      flex-shrink: 0;
+      padding: 10px 0;
+      box-sizing: border-box;
+    }
+
+    #servers ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #servers li {
+      cursor: pointer;
+      width: 50px;
+      height: 50px;
+      background: #36393f;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      user-select: none;
+      transition: background-color 0.2s;
+    }
+    #servers li:hover {
+      background: #5865f2;
+    }
+
+    #channels {
+      width: 180px;
+      background: #2f3136;
+      padding: 10px;
+      overflow-y: auto;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+
+    #channels ul {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 10px 0;
+    }
+
+    #channels li {
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 4px;
+      user-select: none;
+    }
+    #channels li:hover {
+      background: #40444b;
+    }
+
+    #messagesContainer {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #36393f;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    #messageList {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 10px;
+    }
+
+    .message {
+      margin-bottom: 10px;
+      word-wrap: break-word;
+    }
+
+    #messageInputContainer {
+      display: flex;
+      gap: 10px;
+      padding-top: 10px;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 8px;
+      border-radius: 4px;
+      border: none;
+      font-size: 14px;
+      background: #40444b;
+      color: white;
+    }
+
+    #fileInput {
+      background: #40444b;
+      border-radius: 4px;
+      padding: 6px;
+      color: white;
+      border: none;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: none;
+      background: #5865f2;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background: #4752c4;
+    }
+
+    /* Remove focus outlines */
+    input:focus, button:focus {
+      outline: none;
+      box-shadow: none;
+    }
+
+    /* Change Handle form */
+    #changeHandleForm {
+      display: none;
+      margin-top: 5px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Welcome to the Homepage</h1>
-  <nav>
-    <a href="login">Login</a>
-    <span id="appLink"></span>
-  </nav>
 
-  <script>
-    // Helper function to get cookie by name
-    function getCookie(name) {
-      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-      return match ? match[2] : "";
+<div id="loadingScreen">
+  <div class="loader">
+    <!-- Replace src with your company logo animation -->
+    <img src="https://upload.wikimedia.org/wikipedia/commons/3/3b/Loading_2.gif" alt="Loading..." />
+    <p>Loading Chat App...</p>
+  </div>
+</div>
+
+<div id="login">
+  <h2>Login or Register</h2>
+  <input id="email" type="email" placeholder="Email" /><br /><br />
+  <input id="password" type="password" placeholder="Password" /><br /><br />
+  <button onclick="login()">Login</button>
+  <button onclick="register()">Register</button>
+</div>
+
+<div id="chat" style="display:none;">
+  <div id="topBar">
+    <div>
+      Logged in as: <span id="currentHandle">N/A</span>
+      <button id="changeHandleBtn" style="margin-left: 10px;">Change Handle</button>
+    </div>
+    <div id="changeHandleForm">
+      <input id="newHandle" placeholder="New handle" />
+      <button id="saveHandleBtn">Save</button>
+      <button id="cancelHandleBtn">Cancel</button>
+    </div>
+  </div>
+
+  <div id="mainArea">
+    <div id="servers">
+      <ul id="serverList"></ul>
+      <input id="newServerName" placeholder="New server name" style="width: 100%; box-sizing: border-box; margin-top: 10px; padding: 6px; border-radius: 4px; border:none; background:#40444b; color: white;" />
+      <button onclick="createServer()" style="width: 100%; margin-top: 5px;">Create Server</button>
+    </div>
+
+    <div id="channels">
+      <h3>Channels</h3>
+      <ul id="channelList"></ul>
+      <input id="newChannelName" placeholder="New channel name" style="width: 100%; box-sizing: border-box; padding: 6px; border-radius: 4px; border:none; background:#40444b; color: white;" />
+      <button onclick="createChannel()" style="width: 100%; margin-top: 5px;">Create Channel</button>
+    </div>
+
+    <div id="messagesContainer">
+      <div id="messageList"></div>
+      <div id="messageInputContainer">
+        <input id="messageInput" placeholder="Message" autocomplete="off" />
+        <input type="file" id="fileInput" style="display:none;" disabled />
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDrizdZiiCBjdr3SRvVXfg0rQNHqMkIyXc",
+    authDomain: "benno111chat.firebaseapp.com",
+    projectId: "benno111chat",
+    storageBucket: "benno111chat.firebasestorage.app",
+    messagingSenderId: "1074654415299",
+    appId: "1:1074654415299:web:9862174377eabc53bd9576"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  let currentUser = null;
+  let currentServerId = null;
+  let currentChannelId = null;
+
+  // Loading state tracking
+  let loadingState = {
+    auth: false,
+    servers: false,
+    channels: false
+  };
+
+  function updateLoadingScreen() {
+    if (loadingState.auth && loadingState.servers && loadingState.channels) {
+      const loadingScreen = document.getElementById('loadingScreen');
+      loadingScreen.classList.add('hidden');
+      setTimeout(() => {
+        loadingScreen.style.display = 'none';
+      }, 500);
+    }
+  }
+
+  // Timeout fallback - hide loading screen after 10 sec no matter what
+  const MAX_LOADING_TIME = 10000;
+  setTimeout(() => {
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen.style.display !== 'none') {
+      console.warn('Loading timeout reached, hiding loading screen anyway.');
+      loadingScreen.classList.add('hidden');
+      setTimeout(() => {
+        loadingScreen.style.display = 'none';
+      }, 500);
+    }
+  }, MAX_LOADING_TIME);
+
+  // Auth handling
+  function clearCookiesAndReload() {
+    document.cookie.split(";").forEach(function(c) { 
+      document.cookie = c.replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date(0).toUTCString() + ";path=/"); 
+    });
+    location.reload();
+  }
+
+  function login() {
+    const email = document.getElementById('email').value;
+    const pass = document.getElementById('password').value;
+    auth.signInWithEmailAndPassword(email, pass)
+      .catch(e => {
+        alert(e.message);
+        if (document.cookie) {
+          clearCookiesAndReload();
+        }
+      });
+  }
+
+  function register() {
+    const email = document.getElementById('email').value;
+    const pass = document.getElementById('password').value;
+    auth.createUserWithEmailAndPassword(email, pass)
+      .then(userCredential => {
+        return db.collection('users').doc(userCredential.user.uid).set({ handle: 'user_' + Date.now() });
+      })
+      .catch(e => {
+        alert(e.message);
+        if (document.cookie) {
+          clearCookiesAndReload();
+        }
+      });
+  }
+
+  auth.onAuthStateChanged(user => {
+    loadingState.auth = true;
+    if (user) {
+      currentUser = user;
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('chat').style.display = 'flex';
+      loadUserHandle();
+      loadServers();
+    } else {
+      currentUser = null;
+      document.getElementById('login').style.display = 'block';
+      document.getElementById('chat').style.display = 'none';
+      loadingState.servers = true;   // no servers to load if logged out
+      loadingState.channels = true;  // no channels either
+      updateLoadingScreen();
+    }
+    updateLoadingScreen();
+  });
+
+  // Load user handle and display
+  async function loadUserHandle() {
+    if(!currentUser) return;
+    const doc = await db.collection('users').doc(currentUser.uid).get();
+    if(doc.exists){
+      document.getElementById('currentHandle').textContent = doc.data().handle || 'N/A';
+    }
+  }
+
+  // Handle change UI logic
+  document.getElementById('changeHandleBtn').onclick = () => {
+    document.getElementById('changeHandleForm').style.display = 'block';
+  };
+  document.getElementById('cancelHandleBtn').onclick = () => {
+    document.getElementById('changeHandleForm').style.display = 'none';
+  };
+  document.getElementById('saveHandleBtn').onclick = async () => {
+    const newHandle = document.getElementById('newHandle').value.trim();
+    if(!newHandle.match(/^[a-zA-Z0-9_]+$/)) {
+      return alert('Handle can only contain letters, numbers, and underscores.');
     }
 
-    // Check if token cookie exists and is not empty
-    const token = getCookie("token");
-    if (token) {
-      // If token exists, show the "Go to App" link
-      const appLink = document.createElement('a');
-      appLink.href = "app";
-      appLink.textContent = " | Go to App";
-      document.getElementById("appLink").appendChild(appLink);
+    // Check uniqueness
+    const handleQuery = await db.collection('users').where('handle', '==', newHandle).get();
+    if(!handleQuery.empty) return alert('Handle already taken.');
+
+    // Update Firestore user doc
+    await db.collection('users').doc(currentUser.uid).update({handle: newHandle});
+    document.getElementById('currentHandle').textContent = newHandle;
+    document.getElementById('changeHandleForm').style.display = 'none';
+
+    alert('Handle updated! Your new handle will appear in messages.');
+  };
+
+  // Load servers where current user is member
+  function loadServers() {
+    if (!currentUser) return;
+    db.collection('servers')
+      .where('members', 'array-contains', currentUser.uid)
+      .onSnapshot(snapshot => {
+        const list = document.getElementById('serverList');
+        list.innerHTML = '';
+        snapshot.forEach(doc => {
+          const li = document.createElement('li');
+          li.textContent = doc.data().name[0].toUpperCase(); // Show first letter as server icon
+          li.title = doc.data().name;
+          li.onclick = () => {
+            currentServerId = doc.id;
+            loadingState.channels = false; // reset channels loading
+            loadChannels();
+          };
+          list.appendChild(li);
+        });
+
+        loadingState.servers = true;
+        updateLoadingScreen();
+      });
+  }
+
+  // Create server
+  function createServer() {
+    const name = document.getElementById('newServerName').value.trim();
+    if(!name) return alert("Enter server name");
+    db.collection('servers').add({
+      name,
+      ownerId: currentUser.uid,
+      members: [currentUser.uid]
+    }).then(() => {
+      document.getElementById('newServerName').value = '';
+    });
+  }
+
+  // Load channels in current server
+  function loadChannels() {
+    if(!currentServerId) return;
+    db.collection('servers').doc(currentServerId)
+      .collection('channels')
+      .onSnapshot(snapshot => {
+        const list = document.getElementById('channelList');
+        list.innerHTML = '';
+        snapshot.forEach(doc => {
+          const li = document.createElement('li');
+          li.textContent = doc.data().name;
+          li.onclick = () => {
+            currentChannelId = doc.id;
+            loadMessages();
+          };
+          list.appendChild(li);
+        });
+
+        loadingState.channels = true;
+        updateLoadingScreen();
+      });
+  }
+
+  // Create channel
+  function createChannel() {
+    if(!currentServerId) return alert("Select a server first");
+    const name = document.getElementById('newChannelName').value.trim();
+    if(!name) return alert("Enter channel name");
+    db.collection('servers').doc(currentServerId)
+      .collection('channels').add({
+        name,
+        type: 'text'
+      }).then(() => {
+        document.getElementById('newChannelName').value = '';
+      });
+  }
+
+  // Load messages in current channel
+  function loadMessages() {
+    if(!currentServerId || !currentChannelId) return;
+    db.collection('servers').doc(currentServerId)
+      .collection('channels').doc(currentChannelId)
+      .collection('messages').orderBy('timestamp')
+      .onSnapshot(snapshot => {
+        const messageList = document.getElementById('messageList');
+        messageList.innerHTML = '';
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const div = document.createElement('div');
+          div.className = 'message';
+          div.textContent = `${data.handle}: ${data.text}`;
+          messageList.appendChild(div);
+        });
+        messageList.scrollTop = messageList.scrollHeight;
+      });
+  }
+
+  // Send message
+async function sendMessage() {
+  try {
+    if (!currentServerId || !currentChannelId) {
+      alert("Select server and channel");
+      return;
     }
-  </script>
+
+    const input = document.getElementById('messageInput');
+    const fileInput = document.getElementById('fileInput');
+    let text = input.value.trim();
+
+    let fileUrl = null, fileType = null;
+    if (fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      const storageRef = storage.ref('uploads/' + Date.now() + '_' + file.name);
+      await storageRef.put(file);
+      fileUrl = await storageRef.getDownloadURL();
+      fileType = file.type;
+    }
+
+    if (!text && !fileUrl) {
+      alert('Enter a message or upload a file.');
+      return;
+    }
+
+    const userRef = db.collection('users').doc(currentUser.uid);
+    const userDoc = await userRef.get();
+
+    let senderHandle = 'Anonymous';
+
+    if (userDoc.exists) {
+      const data = userDoc.data();
+      senderHandle = data.handle || 'Anonymous';
+    } else {
+      // Create default user doc with a unique handle
+      senderHandle = 'user_' + Date.now();
+      await userRef.set({ handle: senderHandle });
+    }
+
+    await db.collection('servers').doc(currentServerId)
+      .collection('channels').doc(currentChannelId)
+      .collection('messages').add({
+        senderId: currentUser.uid,
+        senderHandle,
+        text,
+        fileUrl,
+        fileType,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+    input.value = '';
+    fileInput.value = '';
+
+  } catch (error) {
+    console.error("Send message failed:", error);
+    alert("Failed to send message: " + error.message);
+  }
+}
+
+</script>
+
 </body>
 </html>
 
