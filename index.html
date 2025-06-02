@@ -222,12 +222,10 @@
   <div id="topBar">
     <div>
       Logged in as: <span id="currentHandle">N/A</span>
-      <button id="changeHandleBtn" style="margin-left: 10px;">Change Handle</button>
-    </div>
-    <div id="changeHandleForm">
-      <input id="newHandle" placeholder="New handle" />
-      <button id="saveHandleBtn">Save</button>
-      <button id="cancelHandleBtn">Cancel</button>
+    <button id="changeHandleBtn" style="margin-left: 10px;">Change Handle</button>
+  </div>
+  <div>
+    <button id="logoutBtn">Logout</button>
     </div>
   </div>
 
@@ -364,6 +362,21 @@
       updateLoadingScreen();
     }
     updateLoadingScreen();
+    document.getElementById('logoutBtn').onclick = () => {
+  auth.signOut()
+    .then(() => {
+      currentUser = null;
+      currentServerId = null;
+      currentChannelId = null;
+      document.getElementById('chat').style.display = 'none';
+      document.getElementById('login').style.display = 'block';
+      alert("Logged out successfully.");
+    })
+    .catch((error) => {
+      console.error("Logout error:", error);
+      alert("Error logging out: " + error.message);
+    });
+};
   });
 
   // Load user handle and display
@@ -477,23 +490,70 @@
 
   // Load messages in current channel
   function loadMessages() {
-    if(!currentServerId || !currentChannelId) return;
-    db.collection('servers').doc(currentServerId)
-      .collection('channels').doc(currentChannelId)
-      .collection('messages').orderBy('timestamp')
-      .onSnapshot(snapshot => {
-        const messageList = document.getElementById('messageList');
-        messageList.innerHTML = '';
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const div = document.createElement('div');
-          div.className = 'message';
-          div.textContent = `${data.handle}: ${data.text}`;
-          messageList.appendChild(div);
-        });
-        messageList.scrollTop = messageList.scrollHeight;
+  if (!currentServerId || !currentChannelId) return;
+
+  db.collection('servers').doc(currentServerId)
+    .collection('channels').doc(currentChannelId)
+    .collection('messages').orderBy('timestamp')
+    .onSnapshot(snapshot => {
+      const messageList = document.getElementById('messageList');
+      messageList.innerHTML = '';
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const div = document.createElement('div');
+        div.className = 'message';
+        div.innerHTML = `<strong>${data.handle}:</strong> ${linkify(data.text || '')}`;
+        messageList.appendChild(div);
       });
-  }
+
+      messageList.scrollTop = messageList.scrollHeight;
+    });
+}
+function linkify(text) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+  return text.replace(urlRegex, (url) => {
+    // Image extensions
+    if (url.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+      return `<img src="${url}" alt="Image" style="max-width:100%; margin-top:5px;" />`;
+    }
+
+    // Video extensions
+    if (url.match(/\.(mp4|webm|ogg)$/i)) {
+      return `
+        <video controls style="max-width:100%; margin-top:5px;">
+          <source src="${url}" type="video/${url.split('.').pop()}">
+          Your browser does not support the video tag.
+        </video>
+      `;
+    }
+
+    // YouTube embed: Extract video ID correctly from multiple URL formats
+    const ytMatch = url.match(
+      /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtu\.be\/)([\w-]{11})/
+    );
+    if (ytMatch) {
+      const videoId = ytMatch[1];
+      return `
+        <iframe
+          width="320"
+          height="180"
+          src="https://www.youtube.com/embed/${videoId}"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+          style="margin-top:5px;"
+        ></iframe>
+      `;
+    }
+
+    // Default: clickable link
+    return `<a href="${url}" target="_blank" style="color:#00aff4;">${url}</a>`;
+  });
+}
+
+
 
   // Send message
 async function sendMessage() {
@@ -505,6 +565,7 @@ async function sendMessage() {
 
     const input = document.getElementById('messageInput');
     const fileInput = document.getElementById('fileInput');
+    fileInput.value = ''
     let text = input.value.trim();
 
     let fileUrl = null, fileType = null;
@@ -530,7 +591,6 @@ async function sendMessage() {
       const data = userDoc.data();
       senderHandle = data.handle || 'Anonymous';
     } else {
-      // Create default user doc with a unique handle
       senderHandle = 'user_' + Date.now();
       await userRef.set({ handle: senderHandle });
     }
@@ -538,22 +598,21 @@ async function sendMessage() {
     await db.collection('servers').doc(currentServerId)
       .collection('channels').doc(currentChannelId)
       .collection('messages').add({
-        senderId: currentUser.uid,
-        senderHandle,
-        text,
-        fileUrl,
-        fileType,
+        text: text || '',
+        handle: senderHandle,
+        fileUrl: fileUrl || null,
+        fileType: fileType || null,
+        userId: currentUser.uid,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
 
     input.value = '';
-    fileInput.value = '';
-
   } catch (error) {
-    console.error("Send message failed:", error);
+    console.error("Error sending message:", error);
     alert("Failed to send message: " + error.message);
   }
 }
+
 
 </script>
 
